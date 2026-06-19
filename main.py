@@ -16,7 +16,8 @@ STATUS_ID = 102403275
 
 app = FastAPI(title="Lead Instagram → Kommo")
 
-PHONE_RE = re.compile(r"^\+55\d{10,11}$")
+PHONE_WITH_COUNTRY = re.compile(r"^\+55\d{10,11}$")
+PHONE_LOCAL = re.compile(r"^\d{10,11}$")
 
 
 class LeadPayload(BaseModel):
@@ -35,11 +36,13 @@ class LeadPayload(BaseModel):
     @classmethod
     def phone_valid(cls, v: str) -> str:
         v = re.sub(r"[\s\-\(\)]", "", v)
-        if not PHONE_RE.match(v):
-            raise ValueError(
-                "telefone inválido — use formato +55DDNNNNNNNNN (ex: +5511999998888)"
-            )
-        return v
+        if PHONE_WITH_COUNTRY.match(v):
+            return v
+        if PHONE_LOCAL.match(v):
+            return f"+55{v}"
+        raise ValueError(
+            "telefone inválido — use DDD+número (ex: 47999998888) ou +55DDNNNNNNNNN"
+        )
 
 
 @app.get("/health")
