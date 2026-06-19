@@ -3,7 +3,9 @@ import re
 import logging
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -15,6 +17,17 @@ PIPELINE_ID = 10334455
 STATUS_ID = 102403275
 
 app = FastAPI(title="Lead Instagram → Kommo")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError):
+    body = exc.body
+    logger.warning("Validação falhou — body recebido: %s | erros: %s", body, exc.errors())
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+
 
 PHONE_WITH_COUNTRY = re.compile(r"^\+55\d{10,11}$")
 PHONE_LOCAL = re.compile(r"^\d{10,11}$")
