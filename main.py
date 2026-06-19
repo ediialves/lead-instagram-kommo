@@ -55,7 +55,7 @@ class LeadPayload(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("nome não pode ser vazio")
-        return v
+        return v.split()[0]
 
     @field_validator("phone")
     @classmethod
