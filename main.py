@@ -22,15 +22,25 @@ app = FastAPI(title="Lead Instagram → Kommo")
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     body = exc.body
-    logger.warning("Validação falhou — body recebido: %s | erros: %s", body, exc.errors())
+    safe_errors = [
+        {"type": e.get("type"), "loc": e.get("loc"), "msg": e.get("msg"), "input": e.get("input")}
+        for e in exc.errors()
+    ]
+    logger.warning("Validação falhou — body recebido: %s | erros: %s", body, safe_errors)
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()},
+        content={"detail": safe_errors},
     )
 
 
 PHONE_WITH_COUNTRY = re.compile(r"^\+55\d{10,11}$")
 PHONE_LOCAL = re.compile(r"^\d{10,11}$")
+TEMPLATE_VAR = re.compile(r"\{\{.+?\}\}")
+
+TEMPLATE_ERROR = (
+    "variável não foi substituída corretamente — "
+    "verifique a configuração do Request body na Suvvy"
+)
 
 
 class LeadPayload(BaseModel):
@@ -40,6 +50,8 @@ class LeadPayload(BaseModel):
     @field_validator("name")
     @classmethod
     def name_not_empty(cls, v: str) -> str:
+        if TEMPLATE_VAR.search(v):
+            raise ValueError(TEMPLATE_ERROR)
         v = v.strip()
         if not v:
             raise ValueError("nome não pode ser vazio")
@@ -48,6 +60,8 @@ class LeadPayload(BaseModel):
     @field_validator("phone")
     @classmethod
     def phone_valid(cls, v: str) -> str:
+        if TEMPLATE_VAR.search(v):
+            raise ValueError(TEMPLATE_ERROR)
         v = re.sub(r"[\s\-\(\)]", "", v)
         if PHONE_WITH_COUNTRY.match(v):
             return v
