@@ -89,6 +89,7 @@ async def novo_lead(payload: LeadPayload):
             "pipeline_id": PIPELINE_ID,
             "status_id": STATUS_ID,
             "_embedded": {
+                "tags": [{"name": "bot-instagram"}],
                 "contacts": [
                     {
                         "first_name": payload.name,
